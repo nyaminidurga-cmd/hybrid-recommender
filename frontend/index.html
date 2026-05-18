@@ -98,13 +98,13 @@
                 </button>
                 <input type="file" id="file-input" accept=".csv,.json" hidden>
             </div>
-            <div class="controls__right">
+           <div class="controls__right">
                 <div class="weight-control" id="weight-controls">
-                    <span class="weight-label">Content</span>
+                    <label class="weight-label" for="weight-alpha" data-tooltip="Content similarity weight - Higher values prioritize products similar to your search">Content</label>
                     <input type="range" id="weight-alpha" min="0" max="100" value="40" class="weight-slider">
-                    <span class="weight-label">Collab</span>
+                    <label class="weight-label" for="weight-beta" data-tooltip="Collaborative filtering weight - Higher values prioritize what similar users liked">Collab</label>
                     <input type="range" id="weight-beta" min="0" max="100" value="35" class="weight-slider">
-                    <span class="weight-label">Sentiment</span>
+                    <label class="weight-label" for="weight-gamma" data-tooltip="Sentiment weight - Higher values prioritize products with positive sentiment">Sentiment</label>
                     <input type="range" id="weight-gamma" min="0" max="100" value="25" class="weight-slider">
                 </div>
             </div>

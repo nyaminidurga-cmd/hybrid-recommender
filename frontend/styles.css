@@ -1009,3 +1009,35 @@ body {
     width: 0%;
     z-index: 9999; /* Keeps it above the header */
 }
+
+/* Custom tooltip styles for weight sliders - GSSoC Issue #29 */
+.weight-label {
+    position: relative;
+    cursor: help;
+}
+
+.weight-label:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.weight-label:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 115%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a1a2e;
+}
