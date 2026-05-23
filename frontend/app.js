@@ -320,7 +320,7 @@ function toggleWishlist(product) {
 
     saveWishlist(wishlist);
 
-    renderProducts(state.allProducts, false);
+    renderProducts(state.allProducts, { append: false });
 }
 
 // ── API Helpers ─────────────────────────────────────────────────────
@@ -641,7 +641,7 @@ async function loadProducts(append = false) {
             state.allProducts = [...(state.allProducts || []), ...products];
         }
 
-        renderProducts(products, append);
+        renderProducts(products, { append });
         els.productCount.textContent = `${state.products.length} of ${state.totalProducts} products`;
 
         if (!state.hasMore) {
@@ -743,7 +743,7 @@ async function loadSearchResults(query) {
         state.products = [];
         state.hasMore = false;
         state.allProducts = [...products];
-        renderProducts(products, false);
+        renderProducts(products, { append: false, ignoreFilters: true });
     } catch {
         els.skeletonLoader.hidden = true;
         toast('Search failed', 'error');
@@ -779,8 +779,13 @@ function createLazyImage(src, alt) {
     return img;
 }
 
-function renderProducts(products, append) {
-    products = applyFilters(products);
+function renderProducts(products, options = {}) {
+    const append = options.append || false;
+    const ignoreFilters = options.ignoreFilters || false;
+
+    if (!ignoreFilters) {
+        products = applyFilters(products);
+    }
     els.productCount.textContent = `${products.length} products`;
     if (!append) {
     els.productGrid.innerHTML = '';
@@ -1525,7 +1530,7 @@ async function loadProducts(append = false) {
             els.skeletonLoader.hidden = true;
         }
 
-        renderProducts(products, append);
+        renderProducts(products, { append });
         const visibleCount =
     state.selectedCategory === 'All Categories'
         ? products.length
@@ -1541,81 +1546,6 @@ els.productCount.textContent = `${visibleCount} products loaded`;
         els.skeletonLoader.hidden = true;
         toast('Failed to load products', 'error');
     }
-}
-
-async function loadSearchResults(query) {
-    els.productGrid.innerHTML = '';
-    els.skeletonLoader.hidden = false;
-    els.productsTitle.textContent = `Results for "${query}"`;
-
-    try {
-        const data = await API.get(`/api/search?q=${encodeURIComponent(query)}&limit=40`);
-        const products = data.results || [];
-        els.skeletonLoader.hidden = true;
-        els.productCount.textContent = `${products.length} results`;
-        state.products = [];
-        renderProducts(products, false);
-        els.loadMoreContainer.hidden = true;
-    } catch {
-        els.skeletonLoader.hidden = true;
-        toast('Search failed', 'error');
-    }
-}
-
-function renderProducts(products, append) {
-    if (!append) state.products = [];
-
-    const fragment = document.createDocumentFragment();
-    const filteredProducts =
-    state.selectedCategory === 'All Categories'
-        ? products
-        : products.filter(
-            p => p.category === state.selectedCategory
-        );
-    filteredProducts.forEach((p, i) => {
-        state.products.push(p);
-        const card = document.createElement('div');
-        card.className = 'product-card';
-        card.style.animationDelay = `${i * 50}ms`;
-        card.innerHTML = `
-            <div class="product-card__image">
-                ${categoryIcon(p.category)}
-            </div>
-            <div class="product-card__body">
-                ${p.category ? `<span class="product-card__category">${p.category}</span>` : ''}
-                <h3 class="product-card__title">${p.title || 'Untitled'}</h3>
-                <p class="product-card__desc">${p.description || 'No description available.'}</p>
-                <div class="product-card__footer">
-                    <div class="product-card__rating">
-                        <div class="star-rating">${renderStars(p.rating || 0)}</div>
-                        <span class="rating-value">${(p.rating || 0).toFixed(1)}</span>
-                    </div>
-                    ${sentimentBadge(p.avg_sentiment || 0)}
-                </div>
-            </div>
-            <div class="product-card__actions">
-                <button class="btn--add-cart" data-title="${p.title}">
-                    Get Recommendations
-                </button>
-            </div>
-        `;
-
-        // Click → get recommendations
-        card.querySelector('.btn--add-cart').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const title = e.target.dataset.title;
-            loadRecommendations(title);
-            toast(`Finding recommendations for "${title.substring(0, 40)}..."`, 'info');
-        });
-
-        card.addEventListener('click', () => {
-            loadRecommendations(p.title);
-        });
-
-        fragment.appendChild(card);
-    });
-
-    els.productGrid.appendChild(fragment);
 }
 
 // ── Recommendations ─────────────────────────────────────────────────
