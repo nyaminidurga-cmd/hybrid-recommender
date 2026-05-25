@@ -56,6 +56,7 @@ RESPONSE_TIME_HEADER = "X-Response-Time-ms"
 DEFAULT_SLOW_RESPONSE_THRESHOLD_MS = 1000.0
 CACHE_TTL_SECONDS = 300
 CACHE_CONTROL_VALUE = f"public, max-age={CACHE_TTL_SECONDS}"
+MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(5 * 1024 * 1024)))
 _response_cache: dict = {}
 
 
@@ -92,6 +93,27 @@ def _clear_response_cache() -> None:
 def _set_cache_headers(response: Response, status: str) -> None:
     response.headers["Cache-Control"] = CACHE_CONTROL_VALUE
     response.headers["X-Cache"] = status
+
+
+def _validate_upload_bytes(filename: str, ext: str, contents: bytes) -> None:
+    if not contents:
+        raise HTTPException(400, "Uploaded file is empty.")
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f"Uploaded file exceeds {MAX_UPLOAD_BYTES} bytes.")
+    if b"\x00" in contents[:4096]:
+        raise HTTPException(400, "Uploaded file appears to be binary.")
+
+    sample = contents[:4096].lstrip()
+    lowered_name = filename.lower()
+    if ext == ".json":
+        if not sample.startswith((b"{", b"[")):
+            raise HTTPException(400, "JSON uploads must contain JSON content.")
+    elif ext == ".csv":
+        lowered_sample = sample[:128].lower()
+        if lowered_sample.startswith((b"{", b"[", b"<!doctype", b"<html", b"<?xml")):
+            raise HTTPException(400, "CSV uploads must contain CSV content.")
+        if not lowered_name.endswith(".csv"):
+            raise HTTPException(400, "CSV uploads must use a .csv filename.")
 
 
 # CORS
@@ -412,6 +434,7 @@ async def upload_dataset(file: UploadFile = File(...)):
         raise HTTPException(400, "Only CSV and JSON files are supported.")
     try:
         contents = await file.read()
+        _validate_upload_bytes(filename, ext, contents)
         buf = io.BytesIO(contents)
         raw_df = read_file(buf, file_format=ext.replace('.', ''))
         adapted_df, meta = adapt_data(raw_df)
