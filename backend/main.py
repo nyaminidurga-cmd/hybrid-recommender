@@ -1112,8 +1112,21 @@ def get_recommendations(
     model_version: Optional[str] = Query(None),
     strategy: Optional[str] = Query(None), 
 ):
-    if not models["ready"]:
-        raise HTTPException(400, "Models not built. Build first via /api/build.")
+    rate_limited = _apply_rate_limit(
+        request,
+        response,
+        scope="recommend",
+        limit_env="RATE_LIMIT_RECOMMEND_PER_MIN",
+        default_limit=20,
+    )
+    if rate_limited is not None:
+        return rate_limited
+
+# ----- EDGE CASES SAFE CHECK -----
+    # Agar model ready nahi hai ya database bilkul khali hai
+    if not models or "ready" not in models or not models["ready"]:
+        raise HTTPException(status_code=400, detail="Models not built or dynamic dataset is empty.")
+    # ---------------------------------
     query_title = title or item_title
     if not query_title:
         raise HTTPException(422, "Query parameter 'title' is required.")
