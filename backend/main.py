@@ -525,13 +525,16 @@ def validate_cors_configuration() -> None:
 # CORS
 allowed_origins = _parse_cors_origins()
 
+allow_creds = True
+if "*" in allowed_origins:
+    allow_creds = False
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=ALLOWED_CORS_METHODS,
-    # Explicitly allow only the headers this app actually uses in browser requests.
-    allow_headers=ALLOWED_CORS_HEADERS,
+    allow_credentials=allow_creds,
+    allow_methods=["*"],
+    allow_headers=["*", "X-CSRF-Token"],
 )
 
 app.add_middleware(CSRFMiddleware)
