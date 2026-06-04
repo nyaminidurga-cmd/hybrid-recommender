@@ -56,6 +56,23 @@ with st.sidebar:
         "Top-N Recommendations",
         min_value=5, max_value=20, value=10, step=1,
     )
+    diversity = st.slider(
+        "🌈 Recommendation Diversity",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.0,
+        step=0.1,
+        help="Increase recommendation variety by reducing similar recommendations."
+    )
+
+    serendipity = st.slider(
+        "✨ Recommendation Serendipity",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.0,
+        step=0.1,
+        help="Discover more unexpected recommendations."
+    )
 
     enable_llm_explanations = st.checkbox(
         "🤖 Enable LLM Explanations",
@@ -330,8 +347,7 @@ else:
                         st.info(f"Exact match not found. Using closest match: **{item_title}**")
                     else:
                         item_title = exact.iloc[0]
-
-                recs = hybrid_model.recommend(item_title,top_n=top_n,explain=True)
+                        recs = hybrid_model.recommend(item_title,top_n=top_n,explain=True,diversity=diversity,serendipity=serendipity,)
 
                 if collab_model is None:
                         badge       = "📄 CONTENT-BASED"
