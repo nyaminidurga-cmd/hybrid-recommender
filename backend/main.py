@@ -1638,42 +1638,42 @@ def build_models():
         collab_model = None
         with _model_lock:
 
-        try:
-            purchases_result = sb.table('purchases').select(
-                'user_id, product_id, rating'
-            ).limit(50000).execute()
+            try:
+                purchases_result = sb.table('purchases').select(
+                    'user_id, product_id, rating'
+                ).limit(50000).execute()
 
-            purchases = purchases_result.data or []
+                purchases = purchases_result.data or []
 
-            if len(purchases) > 10:
-                product_title_map = {
-                    p['id']: p['title']
-                    for p in all_products
-                }
+                if len(purchases) > 10:
+                    product_title_map = {
+                        p['id']: p['title']
+                        for p in all_products
+                    }
 
-                interaction_rows = []
+                    interaction_rows = []
 
-                for p in purchases:
-                    title = product_title_map.get(p['product_id'])
+                    for p in purchases:
+                        title = product_title_map.get(p['product_id'])
 
-                    if title:
-                        interaction_rows.append({
-                            'user_id': p['user_id'],
-                            'title': title,
-                            'rating': p.get('rating', 3.0)
-                        })
+                        if title:
+                            interaction_rows.append({
+                                'user_id': p['user_id'],
+                                'title': title,
+                                'rating': p.get('rating', 3.0)
+                            })
 
-                if len(interaction_rows) > 10:
-                    interaction_df = pd.DataFrame(interaction_rows)
+                    if len(interaction_rows) > 10:
+                        interaction_df = pd.DataFrame(interaction_rows)
 
-                    if interaction_df['user_id'].nunique() > 1:
-                        collab_model = CollaborativeRecommender(interaction_df)
+                        if interaction_df['user_id'].nunique() > 1:
+                            collab_model = CollaborativeRecommender(interaction_df)
 
-        except Exception as e:
-            logger.warning(
-                "Collaborative model data load failed: %s",
-                e
-            )
+            except Exception as e:
+                logger.warning(
+                    "Collaborative model data load failed: %s",
+                    e
+                )
 
         hybrid_model = HybridRecommender(
             content_model,
