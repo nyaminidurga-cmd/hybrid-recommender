@@ -410,7 +410,7 @@ NDCG@K       —  ranking quality (discounted cumulative gain)
 <details>
 <summary><strong>How do I set up the project locally?</strong></summary>
 
-Clone the repository and install the required dependencies using the package manager mentioned in the project documentation. After that, configure the environment variables if needed and start both the frontend and backend servers. Make sure your database or dataset files are also available before running the app.
+Clone the repository and install the required dependencies with `pip install -r requirements.txt`. After that, configure the environment variables if needed and start both the frontend and backend servers. Make sure your database or dataset files are also available before running the app.
 
 </details>
 
@@ -730,6 +730,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) to get started — all skill levels welco
 | 3️⃣ | Submit a Pull Request |
 
 </div>
+
+---
+## Knowledge Graph Embeddings
+
+This project now supports semantic item relationships using
+TransE-style knowledge graph embeddings.
+
+Features:
+- Semantic similarity learning
+- Graph-based recommendation enrichment
+- Hybrid recommendation integration
+- Category/author relationship modeling
+
+Run:
+
+```bash
+python scripts/generate_kg_embeddings.py
 
 ---
 
