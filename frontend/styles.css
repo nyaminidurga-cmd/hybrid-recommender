@@ -2017,3 +2017,49 @@ RESPONSIVE FIX
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* ── Load More Button ─────────────────────────────────────────────── */
+.load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  margin: 24px auto 0;
+  padding: 14px 28px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.load-more-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+  transform: translateY(-1px);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.load-more-btn[hidden] {
+  display: none;
+}
+
+.load-more-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.load-more-btn:hover svg {
+  transform: translateY(2px);
+}
