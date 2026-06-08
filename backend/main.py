@@ -217,8 +217,6 @@ def _get_cached_response(key: str):
             if cached is not None:
                 _cache_hits += 1
                 return json.loads(cached)
-        except (RedisError, json.JSONDecodeError):
-            pass
 
     with _cache_lock:
         cached = _response_cache.get(key)
@@ -235,6 +233,7 @@ def _get_cached_response(key: str):
             return None
         _cache_hits += 1
         return value
+
 
 # ── FIX #1292: HIGH PERFORMANCE RATE LIMITER PATH ─────────────────────
 def _apply_rate_limit(*args, **kwargs):
