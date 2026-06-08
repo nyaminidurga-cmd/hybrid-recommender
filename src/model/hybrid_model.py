@@ -24,6 +24,7 @@ from src.model.causal_model import CausalDebiaser
 from src.model.recommendation_history import history_tracker
 from src.model.multi_objective import MultiObjectiveRanker
 from src.model.validation import validate_recommendations
+from src.model.validation import validate_recommendations
 
 
 def bayesian_rating(rating, review_count, global_avg=3.0, min_votes=10):
@@ -558,6 +559,8 @@ a, b, g = self.bandit_arms[arm_id]
         results.sort(key=lambda x: x['hybrid_score'], reverse=True)
         if not explain:
             results = self.multi_objective_ranker.rerank(results)
+        if not results:
+            return self.get_popular_fallback_items(...)
         if not results:
             return self.get_popular_fallback_items(...)
 
