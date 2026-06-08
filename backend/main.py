@@ -1945,6 +1945,7 @@ def get_recommendations(
     if rate_limited is not None:
         return rate_limited
 
+    cache_key = _cache_key("recommend", query_title, top_n, explain, target_catalog, model_version, user_id)
 # ----- EDGE CASES SAFE CHECK -----
     # Agar model ready nahi hai ya database bilkul khali hai
     if not models or "ready" not in models or not models["ready"]:
@@ -1982,20 +1983,24 @@ def get_recommendations(
         _set_cache_headers(response, "HIT")
         return cached
 
-    recs = selected_models["hybrid"].recommend(
-        query_title, top_n=top_n, explain=explain, target_catalog=target_catalog
-    )
+    if not models["ready"]:
+        raise HTTPException(400, "Models not built. Build first via /api/build.")
 
-    # Popularity fallback (existing behaviour)
-    if not recs and strategy == "popularity" and models["collab"]:
-        recs = models["collab"]._popularity_fallback(top_n)
+    active_hybrid = models["hybrid"]
+    if model_version and model_version in MODEL_REGISTRY:
+        active_hybrid = MODEL_REGISTRY[model_version]["hybrid"]
 
-    # Cold-start fallback: blend content similarity with popularity/rating
-    if not recs and (strategy == "cold"):
-        combined_text = query_title
-        cold_recs = cold_start_recommendation(combined_text, top_n=top_n, target_catalog=target_catalog)
-        if cold_recs:
-            recs = cold_recs
+    import inspect
+    recommend_func = active_hybrid.recommend
+    sig = inspect.signature(recommend_func)
+    recommend_kwargs = {"top_n": top_n}
+    if "explain" in sig.parameters:
+        recommend_kwargs["explain"] = explain
+    if "target_catalog" in sig.parameters:
+        recommend_kwargs["target_catalog"] = target_catalog
+    if "user_id" in sig.parameters:
+        recommend_kwargs["user_id"] = user_id
+    recs = recommend_func(query_title, **recommend_kwargs)
 
     if not recs:
         raise HTTPException(404, "Item not found or no recommendations.")
@@ -2010,7 +2015,7 @@ def get_recommendations(
         "count": len(recs),
         "results": recs,
         "recommendations": recs,
-        "weights": models["hybrid"].get_weights(),
+        "weights": active_hybrid.get_weights(),
         "explain": explain,
         "target_catalog": target_catalog,
         "model_version": model_version or ACTIVE_MODEL_VERSION,
@@ -2027,12 +2032,16 @@ def get_recommendations(
         shadow_start = time.time()
 
         try:
-            shadow_recs = shadow_model["hybrid"].recommend(
-                query_title,
-                top_n=top_n,
-                explain=explain,
-                target_catalog=target_catalog,
-            )
+            shadow_recommend_func = shadow_model["hybrid"].recommend
+            shadow_sig = inspect.signature(shadow_recommend_func)
+            shadow_kwargs = {"top_n": top_n}
+            if "explain" in shadow_sig.parameters:
+                shadow_kwargs["explain"] = explain
+            if "target_catalog" in shadow_sig.parameters:
+                shadow_kwargs["target_catalog"] = target_catalog
+            if "user_id" in shadow_sig.parameters:
+                shadow_kwargs["user_id"] = user_id
+            shadow_recs = shadow_recommend_func(query_title, **shadow_kwargs)
 
             shadow_latency = round(
                 (time.time() - shadow_start) * 1000,
