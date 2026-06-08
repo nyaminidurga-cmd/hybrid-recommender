@@ -1315,11 +1315,58 @@ def train_federated(req: FederatedTrainRequest):
 # ── Recommendations ───────────────────────────────────────────────────
 @app.get("/api/recommend")
 @app.get("/api/recommend/{item_title}")
-def get_recommendations(item_title: str, top_n: int = 10) -> dict:
+def get_recommendations(
+    request: Request,
+    response: Response,
+    item_title: Optional[str] = None,
+    title: Optional[str] = Query(None),
+    user_id: Optional[str] = Query(None),
+    top_n: int = 10,
+    explain: bool = Query(False),
+    target_catalog: Optional[str] = Query(None),
+    model_version: Optional[str] = Query(None),
+) -> dict:
     """Get hybrid recommendations for an item."""
+    query_title = item_title or title
+    if not query_title:
+        raise HTTPException(400, "Item title is required.")
+
+    # Rate limiting
+    rate_limited = _apply_rate_limit(
+        request,
+        response,
+        scope="recommend",
+        limit_env="RATE_LIMIT_RECOMMEND_PER_MIN",
+        default_limit=60,
+    )
+    if rate_limited is not None:
+        return rate_limited
+
+    cache_key = _cache_key("recommend", query_title, top_n, explain, target_catalog, model_version, user_id)
+    cached = _get_cached_response(cache_key)
+    if cached is not None:
+        _set_cache_headers(response, "HIT")
+        return cached
+
     if not models["ready"]:
         raise HTTPException(400, "Models not built. Build first via /api/build.")
-    recs = models["hybrid"].recommend(item_title, top_n=top_n)
+
+    active_hybrid = models["hybrid"]
+    if model_version and model_version in MODEL_REGISTRY:
+        active_hybrid = MODEL_REGISTRY[model_version]["hybrid"]
+
+    import inspect
+    recommend_func = active_hybrid.recommend
+    sig = inspect.signature(recommend_func)
+    recommend_kwargs = {"top_n": top_n}
+    if "explain" in sig.parameters:
+        recommend_kwargs["explain"] = explain
+    if "target_catalog" in sig.parameters:
+        recommend_kwargs["target_catalog"] = target_catalog
+    if "user_id" in sig.parameters:
+        recommend_kwargs["user_id"] = user_id
+    recs = recommend_func(query_title, **recommend_kwargs)
+
     if not recs:
         raise HTTPException(404, "Item not found or no recommendations.")
 
@@ -1328,9 +1375,12 @@ def get_recommendations(item_title: str, top_n: int = 10) -> dict:
         has_history = user_id in models["collab"]._user_to_idx
 
     payload = {
+        "query": query_title,
         "query_item": query_title,
+        "count": len(recs),
+        "results": recs,
         "recommendations": recs,
-        "weights": models["hybrid"].get_weights(),
+        "weights": active_hybrid.get_weights(),
         "explain": explain,
         "target_catalog": target_catalog,
         "model_version": model_version or ACTIVE_MODEL_VERSION,
@@ -1347,12 +1397,16 @@ def get_recommendations(item_title: str, top_n: int = 10) -> dict:
         shadow_start = time.time()
 
         try:
-            shadow_recs = shadow_model["hybrid"].recommend(
-                query_title,
-                top_n=top_n,
-                explain=explain,
-                target_catalog=target_catalog,
-            )
+            shadow_recommend_func = shadow_model["hybrid"].recommend
+            shadow_sig = inspect.signature(shadow_recommend_func)
+            shadow_kwargs = {"top_n": top_n}
+            if "explain" in shadow_sig.parameters:
+                shadow_kwargs["explain"] = explain
+            if "target_catalog" in shadow_sig.parameters:
+                shadow_kwargs["target_catalog"] = target_catalog
+            if "user_id" in shadow_sig.parameters:
+                shadow_kwargs["user_id"] = user_id
+            shadow_recs = shadow_recommend_func(query_title, **shadow_kwargs)
 
             shadow_latency = round(
                 (time.time() - shadow_start) * 1000,
