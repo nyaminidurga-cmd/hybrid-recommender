@@ -931,20 +931,6 @@ def _get_feedback_storage_client():
     return client
 
 
-# CORS
-allowed_origins_env = os.environ.get("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000")
-allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*", "X-CSRF-Token"],
-)
-
-app.add_middleware(CSRFMiddleware)
-
 # ── Response Time Monitoring ─────────────────────────────────────────
 SLOW_RESPONSE_THRESHOLD_MS = 500.0
 METRICS_SAMPLE_SIZE = 1000
