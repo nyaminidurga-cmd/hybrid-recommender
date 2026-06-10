@@ -174,7 +174,13 @@ class HybridRecommender:
         self.gamma = float(gamma) / total
 
     def get_weights(self):
-        return {'alpha': self.alpha, 'beta': self.beta, 'gamma': self.gamma}
+        return {
+            'alpha': self.alpha,
+            'beta': self.beta,
+            'gamma': self.gamma,
+            'delta': self.delta,
+    }
+
     def select_bandit_arm(self):
         import random
 
