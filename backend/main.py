@@ -2633,3 +2633,50 @@ if os.path.isdir(frontend_dir):
     def serve_dashboard():
         return FileResponse(os.path.join(frontend_dir, "dashboard.html"))
 
+# ── CLEAR USER PREFERENCES & RESET CACHE ENDPOINT ───────────────────
+@app.post("/api/v1/user/preferences/reset", dependencies=[Depends(csrf_header_dep)])
+async def reset_user_preferences(request: Request):
+    """
+    Clears the user interaction weights/history from Supabase 
+    and wipes the local/Redis recommendation cache for that user.
+    """
+    # 1. Authentic/Validate user (In production, replace with your real auth dependency)
+    user_id = request.headers.get("x-user-id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing x-user-id header.")
+    
+    # Securely validate the user ID format
+    validated_user_id = _validate_user_id(user_id)
+    
+    try:
+        # 2. Connect to Supabase and delete preference entries
+        supabase = get_supabase_admin()
+        
+        # Adjust table name and column names to match your schema
+        supabase.table("user_preferences").delete().eq("user_id", validated_user_id).execute()
+        supabase.table("user_interactions").delete().eq("user_id", validated_user_id).execute()
+        
+        # 3. Wipe out the internal memory cache
+        _clear_response_cache()
+        
+        # 4. Wipe out Redis cache if it is active
+        global _redis_client
+        if _redis_client is not None:
+            try:
+                # Find keys matching this user's recommendation cache pattern
+                cache_pattern = f"*recommend*:{validated_user_id.lower()}*"
+                keys_to_delete = _redis_client.keys(cache_pattern)
+                if keys_to_delete:
+                    _redis_client.delete(*keys_to_delete)
+            except Exception as cache_err:
+                logger.warning(f"Failed to clear Redis cache keys: {cache_err}")
+
+        return {
+            "status": "success",
+            "message": "User preferences completely reset. Cache successfully evicted."
+        }
+        
+    except Exception as e:
+        logger.error(f"Error resetting preferences for user {validated_user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to reset user data.")
+
