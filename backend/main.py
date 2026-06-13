@@ -1501,6 +1501,9 @@ async def get_recommendation_explanation(item_id: str, user_id: str):
     item_id.  If the models have not been built yet, or item_id is not found
     in the recommendation results, an appropriate HTTP error is raised.
     """
+    query = _normalize_search_query(item_id)
+    if not query:
+        return {"results": [], "count": 0, "query": query}
     if not models.get("ready") or not models.get("hybrid"):
         raise HTTPException(status_code=400, detail="Models not built. Call /api/build first.")
 
