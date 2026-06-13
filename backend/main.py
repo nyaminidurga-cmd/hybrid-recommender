@@ -2596,8 +2596,8 @@ def get_categories():
         logger.error("Failed to retrieve categories: %s", e)
         return {"categories": []}
     
-        @app.post("/api/interactions")
-        def log_interaction(data: InteractionCreate):
+    @app.post("/api/interactions")
+    def log_interaction(data: InteractionCreate):
              USER_INTERACTIONS.append({
             "user_id": data.user_id,
             "item_id": data.item_id,
@@ -2977,7 +2977,10 @@ async def reset_user_preferences(request: Request):
         
         # 3. Wipe out the internal memory cache
         _clear_response_cache()
-        
+
+
+        global global_redis_client
+      
         if _redis_client is not None:
             try:
                 # Find keys matching this user's recommendation cache pattern
