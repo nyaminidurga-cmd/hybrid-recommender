@@ -2596,8 +2596,8 @@ def get_categories():
         logger.error("Failed to retrieve categories: %s", e)
         return {"categories": []}
     
-    @app.post("/api/interactions")
-    def log_interaction(data: InteractionCreate):
+        @app.post("/api/interactions")
+        def log_interaction(data: InteractionCreate):
              USER_INTERACTIONS.append({
             "user_id": data.user_id,
             "item_id": data.item_id,
