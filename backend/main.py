@@ -2598,10 +2598,7 @@ def get_categories():
     
     @app.post("/api/interactions")
     def log_interaction(data: InteractionCreate):
-@app.post("/api/interactions")
-def log_interaction(data: InteractionCreate):
-
-        USER_INTERACTIONS.append({
+             USER_INTERACTIONS.append({
             "user_id": data.user_id,
             "item_id": data.item_id,
             "interaction_type": data.interaction_type,
